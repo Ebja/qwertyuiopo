@@ -16,6 +16,14 @@ card.style.cssText = `
 
 // 3. Título e instrucciones
 const title = document.createElement('h2');
+title.innerText = 'Subida de Archivos';
+title.style.color = '#333';
+
+const subtitle = document.createElement('p');
+subtitle.innerText = 'Servidor: Pixeldrain (Compatible con GitHub Pages)';
+subtitle.style.fontSize = '12px';
+subtitle.style.color = '#777';
+subtitle.style.marginBottom = '20px';
 
 // 4. Input y Botón
 const fileInput = document.createElement('input');
@@ -24,6 +32,7 @@ fileInput.style.marginBottom = '15px';
 fileInput.style.width = '100%';
 
 const uploadBtn = document.createElement('button');
+uploadBtn.innerText = 'Subir Archivo';
 uploadBtn.style.cssText = `
     background-color: #007bff;
     color: white;

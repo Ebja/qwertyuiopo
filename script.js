@@ -1,80 +1,111 @@
-// 1. Limpiamos el body por si acaso
+// 1. Limpiamos cualquier cosa previa
 document.body.innerHTML = '';
+document.body.style.cssText = 'margin: 0; padding: 0; background-color: #f0f2f5; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;';
 
-const container = document.createElement('div');
-container.style.cssText = `
-    font-family: sans-serif;
-    padding: 40px;
-    max-width: 500px;
-    margin: 50px auto;
+// 2. Creamos la tarjeta central
+const card = document.createElement('div');
+card.style.cssText = `
     background: white;
+    padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 400px;
     text-align: center;
 `;
 
+// 3. Título e instrucciones
 const title = document.createElement('h2');
-title.innerText = 'Subidor de Archivos Pro';
-container.appendChild(title);
 
+// 4. Input y Botón
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
-fileInput.style.margin = '20px 0';
+fileInput.style.marginBottom = '15px';
+fileInput.style.width = '100%';
 
-const btn = document.createElement('button');
-btn.innerText = 'Subir a la nube';
-btn.style.cssText = 'padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;';
+const uploadBtn = document.createElement('button');
+uploadBtn.style.cssText = `
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    transition: background 0.3s;
+`;
 
-const resultDiv = document.createElement('div');
-resultDiv.style.marginTop = '20px';
+// 5. Contenedor de resultados
+const statusDiv = document.createElement('div');
+statusDiv.style.marginTop = '20px';
+statusDiv.style.wordBreak = 'break-all'; // Para que el link no rompa el diseño
 
-container.appendChild(fileInput);
-container.appendChild(document.createElement('br'));
-container.appendChild(btn);
-container.appendChild(resultDiv);
-document.body.appendChild(container);
+// Ensamblar
+card.appendChild(title);
+card.appendChild(subtitle);
+card.appendChild(fileInput);
+card.appendChild(uploadBtn);
+card.appendChild(statusDiv);
+document.body.appendChild(card);
 
-btn.onclick = async () => {
+// 6. Lógica "Arreglada" usando Pixeldrain
+uploadBtn.addEventListener('click', async () => {
     const file = fileInput.files[0];
-    if (!file) return alert("Selecciona un archivo");
+    
+    if (!file) {
+        alert("¡Selecciona un archivo primero!");
+        return;
+    }
 
-    btn.disabled = true;
-    btn.innerText = 'Subiendo...';
-    resultDiv.innerHTML = '⏳ Procesando envío...';
+    // Estado de carga
+    uploadBtn.disabled = true;
+    uploadBtn.innerText = 'Subiendo... espere';
+    uploadBtn.style.backgroundColor = '#6c757d';
+    statusDiv.innerHTML = '<p style="color: blue;">⏳ Enviando datos a la nube...</p>';
 
     const formData = new FormData();
-    // Importante: file.io requiere que el nombre sea 'file'
-    formData.append('file', file);
+    formData.append('file', file); // Pixeldrain también usa el campo 'file'
 
     try {
-        // Usamos file.io pero con un manejo de errores más claro
-        const response = await fetch('https://file.io/?expires=1d', { 
+        // CAMBIO CLAVE: Usamos la API de Pixeldrain
+        const response = await fetch('https://pixeldrain.com/api/file', {
             method: 'POST',
             body: formData
-            // Nota: Al usar GitHub Pages, el navegador envía el Header 'Origin'
+            // Pixeldrain tiene cabeceras CORS muy permisivas, ideal para JS puro
         });
 
-        if (!response.ok) throw new Error('Error en la respuesta del servidor');
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
 
         const data = await response.json();
 
         if (data.success) {
-            resultDiv.innerHTML = `
-                <p style="color: green;">✅ ¡Subido!</p>
-                <input type="text" value="${data.link}" readonly style="width: 80%; padding: 5px; text-align: center;">
-                <p><small>El link expirará en 24h o tras 1 descarga.</small></p>
+            const link = `https://pixeldrain.com/u/${data.id}`;
+            
+            statusDiv.innerHTML = `
+                <div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; border: 1px solid #c3e6cb;">
+                    <strong>¡Subido con éxito!</strong><br><br>
+                    <a href="${link}" target="_blank" style="color: #007bff; font-weight: bold;">${link}</a>
+                </div>
             `;
         } else {
-            throw new Error(data.message || 'Fallo en la subida');
+            throw new Error('La API no devolvió éxito.');
         }
-    } catch (err) {
-        console.error(err);
-        resultDiv.innerHTML = `
-            <p style="color: red;">❌ Error de Red</p>
-            <p><small>Esto puede ser por un bloqueador de anuncios o restricciones de CORS de la API.</small></p>
+
+    } catch (error) {
+        console.error(error);
+        statusDiv.innerHTML = `
+            <div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; border: 1px solid #f5c6cb;">
+                <strong>Error:</strong> No se pudo subir.<br>
+                <small>${error.message}</small>
+            </div>
         `;
     } finally {
-        btn.disabled = false;
-        btn.innerText = 'Subir a la nube';
+        // Restaurar botón
+        uploadBtn.disabled = false;
+        uploadBtn.innerText = 'Subir Archivo';
+        uploadBtn.style.backgroundColor = '#007bff';
     }
-};
+});

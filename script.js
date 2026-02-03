@@ -52,7 +52,6 @@ statusDiv.style.wordBreak = 'break-all'; // Para que el link no rompa el diseño
 
 // Ensamblar
 card.appendChild(title);
-card.appendChild(subtitle);
 card.appendChild(fileInput);
 card.appendChild(uploadBtn);
 card.appendChild(statusDiv);

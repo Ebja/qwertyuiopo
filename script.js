@@ -1,100 +1,80 @@
-// 1. Crear el contenedor principal y estilos básicos
+// 1. Limpiamos el body por si acaso
+document.body.innerHTML = '';
+
 const container = document.createElement('div');
 container.style.cssText = `
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    padding: 30px;
-    max-width: 450px;
+    font-family: sans-serif;
+    padding: 40px;
+    max-width: 500px;
     margin: 50px auto;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     text-align: center;
 `;
 
-// 2. Título
 const title = document.createElement('h2');
-title.innerText = 'Subir a File.io';
+title.innerText = 'Subidor de Archivos Pro';
 container.appendChild(title);
 
-// 3. Crear el formulario
-const form = document.createElement('form');
-
-// Input de archivo
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
-fileInput.name = 'file'; // Importante: file.io espera el campo con nombre 'file'
-fileInput.style.display = 'block';
-fileInput.style.margin = '20px auto';
+fileInput.style.margin = '20px 0';
 
-// Botón de envío
-const submitBtn = document.createElement('button');
-submitBtn.type = 'submit';
-submitBtn.innerText = 'Subir Archivo';
-submitBtn.style.cssText = `
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-`;
+const btn = document.createElement('button');
+btn.innerText = 'Subir a la nube';
+btn.style.cssText = 'padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;';
 
-form.appendChild(fileInput);
-form.appendChild(submitBtn);
-container.appendChild(form);
-
-// 4. Área para mostrar el resultado (donde saldrá el link)
 const resultDiv = document.createElement('div');
 resultDiv.style.marginTop = '20px';
-container.appendChild(resultDiv);
 
-// 5. Inyectar al body
+container.appendChild(fileInput);
+container.appendChild(document.createElement('br'));
+container.appendChild(btn);
+container.appendChild(resultDiv);
 document.body.appendChild(container);
 
-// 6. Lógica de envío
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
+btn.onclick = async () => {
     const file = fileInput.files[0];
-    if (!file) {
-        alert("Por favor, selecciona un archivo.");
-        return;
-    }
+    if (!file) return alert("Selecciona un archivo");
 
-    // Limpiar resultado anterior y mostrar estado de carga
-    resultDiv.innerHTML = '<p style="color: #666;">Subiendo archivo...</p>';
-    submitBtn.disabled = true;
-    submitBtn.style.opacity = '0.5';
+    btn.disabled = true;
+    btn.innerText = 'Subiendo...';
+    resultDiv.innerHTML = '⏳ Procesando envío...';
 
     const formData = new FormData();
+    // Importante: file.io requiere que el nombre sea 'file'
     formData.append('file', file);
 
     try {
-        // Petición POST a file.io
-        const response = await fetch('https://file.io', {
+        // Usamos file.io pero con un manejo de errores más claro
+        const response = await fetch('https://file.io/?expires=1d', { 
             method: 'POST',
             body: formData
+            // Nota: Al usar GitHub Pages, el navegador envía el Header 'Origin'
         });
+
+        if (!response.ok) throw new Error('Error en la respuesta del servidor');
 
         const data = await response.json();
 
         if (data.success) {
-            // Mostrar el link en pantalla
             resultDiv.innerHTML = `
-                <p style="color: green; font-weight: bold;">¡Subida con éxito!</p>
-                <p>Tu archivo se borrará después de la primera descarga:</p>
-                <a href="${data.link}" target="_blank" style="word-break: break-all; color: #007bff;">
-                    ${data.link}
-                </a>
+                <p style="color: green;">✅ ¡Subido!</p>
+                <input type="text" value="${data.link}" readonly style="width: 80%; padding: 5px; text-align: center;">
+                <p><small>El link expirará en 24h o tras 1 descarga.</small></p>
             `;
         } else {
-            throw new Error(data.message || 'Error al subir');
+            throw new Error(data.message || 'Fallo en la subida');
         }
-    } catch (error) {
-        resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+    } catch (err) {
+        console.error(err);
+        resultDiv.innerHTML = `
+            <p style="color: red;">❌ Error de Red</p>
+            <p><small>Esto puede ser por un bloqueador de anuncios o restricciones de CORS de la API.</small></p>
+        `;
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
+        btn.disabled = false;
+        btn.innerText = 'Subir a la nube';
     }
-});
+};

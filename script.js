@@ -1,72 +1,60 @@
-// 1. Configuración de la UI (Estilo moderno y limpio)
+// 1. Crear interfaz básica
 document.body.innerHTML = '';
-document.body.style.cssText = 'margin: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, sans-serif;';
+document.body.style.cssText = 'background:#111; color:#eee; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;';
 
 const card = document.createElement('div');
-card.style.cssText = 'background: #1e293b; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 400px; text-align: center; border: 1px solid #334155;';
+card.style.cssText = 'background:#222; padding:30px; border-radius:15px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5); width:350px; border:1px solid #444;';
 
 card.innerHTML = `
-    <h2 style="color: #38bdf8; margin: 0 0 10px;">Subida Directa</h2>
-    <p style="color: #94a3b8; font-size: 14px; margin-bottom: 25px;">Servicio estable vía Catbox.moe</p>
-    <input type="file" id="fileInput" style="display: none;">
-    <label for="fileInput" style="display: block; padding: 20px; border: 2px dashed #334155; border-radius: 8px; color: #94a3b8; cursor: pointer; margin-bottom: 20px; transition: border-color 0.3s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='#334155'">
-        Click para seleccionar archivo
-    </label>
-    <button id="uploadBtn" style="width: 100%; padding: 12px; background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">
-        Subir a la Nube
-    </button>
-    <div id="status" style="margin-top: 25px; min-height: 40px;"></div>
+    <h2 style="margin-top:0; color:#00ffcc;">Subidor Directo</h2>
+    <p style="font-size:12px; color:#888;">Servicio: Uguu.se (Temporal - 24h)</p>
+    <input type="file" id="archivo" style="margin:20px 0; width:100%;">
+    <button id="btn" style="width:100%; padding:10px; background:#00ffcc; color:#000; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">SUBIR ARCHIVO</button>
+    <div id="resultado" style="margin-top:20px; font-size:14px; word-break:break-all;"></div>
 `;
 
 document.body.appendChild(card);
 
-const fileInput = document.getElementById('fileInput');
-const btn = document.getElementById('uploadBtn');
-const status = document.getElementById('status');
+const btn = document.getElementById('btn');
+const input = document.getElementById('archivo');
+const resultado = document.getElementById('resultado');
 
-// 2. Lógica de subida a Catbox
+// 2. Lógica de subida
 btn.onclick = async () => {
-    const file = fileInput.files[0];
-    if (!file) return alert("Selecciona un archivo primero");
+    if (!input.files[0]) return alert("Elige un archivo");
 
     btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.innerText = 'Subiendo...';
-    status.innerHTML = '<span style="color: #38bdf8;">⏳ Procesando...</span>';
+    btn.innerText = "Subiendo...";
+    resultado.innerHTML = "⏳ Conectando...";
 
     const formData = new FormData();
-    formData.append('reqtype', 'fileupload');
-    formData.append('fileToUpload', file);
+    formData.append('files[]', input.files[0]); // Uguu requiere el nombre 'files[]'
 
     try {
-        // Usamos un proxy de CORS si es necesario, pero Catbox suele aceptar bien peticiones directas
-        const response = await fetch('https://corsproxy.io/?https://catbox.moe/user/api.php', {
+        // Petición directa a la API de Uguu
+        const response = await fetch('https://uguu.se/upload.php', {
             method: 'POST',
             body: formData
         });
 
-        if (!response.ok) throw new Error('Error en la conexión con el servidor');
+        if (!response.ok) throw new Error("Error en el servidor");
 
-        // Catbox devuelve directamente el link como TEXTO, no como JSON
-        const link = await response.text();
+        const data = await response.json();
 
-        if (link.startsWith('http')) {
-            status.innerHTML = `
-                <div style="background: rgba(56, 189, 248, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #38bdf8;">
-                    <p style="color: #38bdf8; margin: 0 0 10px; font-size: 14px;">✅ Archivo disponible en:</p>
-                    <a href="${link}" target="_blank" style="color: white; font-size: 13px; word-break: break-all;">${link}</a>
-                </div>
-            `;
-        } else {
-            throw new Error(link || 'Respuesta inesperada del servidor');
-        }
+        // Uguu devuelve un array de archivos
+        const link = data.files[0].url;
 
+        resultado.innerHTML = `
+            <div style="background:#333; padding:10px; border-radius:5px; border:1px solid #00ffcc;">
+                <p style="color:#00ffcc; margin:0 0 5px 0;">¡Subido!</p>
+                <a href="${link}" target="_blank" style="color:#fff; text-decoration:none; font-size:12px;">${link}</a>
+            </div>
+        `;
     } catch (err) {
         console.error(err);
-        status.innerHTML = `<p style="color: #f87171; font-size: 13px;">❌ Error: ${err.message}.<br>Prueba desactivando tu AdBlock.</p>`;
+        resultado.innerHTML = `<span style="color:#ff4444;">❌ Error de red. Prueba desactivando el AdBlock.</span>`;
     } finally {
         btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.innerText = 'Subir a la Nube';
+        btn.innerText = "SUBIR ARCHIVO";
     }
 };

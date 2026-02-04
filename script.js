@@ -1,87 +1,72 @@
-// 1. Estilos y Estructura (UI limpia)
+// 1. Configuración de la UI (Estilo moderno y limpio)
 document.body.innerHTML = '';
-document.body.style.cssText = 'margin: 0; background: #121212; color: #e0e0e0; font-family: "Segoe UI", sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;';
+document.body.style.cssText = 'margin: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, sans-serif;';
 
 const card = document.createElement('div');
-card.style.cssText = 'background: #1e1e1e; padding: 2rem; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 90%; max-width: 450px; text-align: center; border: 1px solid #333;';
+card.style.cssText = 'background: #1e293b; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 400px; text-align: center; border: 1px solid #334155;';
 
-const title = document.createElement('h2');
-title.innerText = 'Subida Cloud (Gofile)';
-title.style.color = '#bb86fc';
+card.innerHTML = `
+    <h2 style="color: #38bdf8; margin: 0 0 10px;">Subida Directa</h2>
+    <p style="color: #94a3b8; font-size: 14px; margin-bottom: 25px;">Servicio estable vía Catbox.moe</p>
+    <input type="file" id="fileInput" style="display: none;">
+    <label for="fileInput" style="display: block; padding: 20px; border: 2px dashed #334155; border-radius: 8px; color: #94a3b8; cursor: pointer; margin-bottom: 20px; transition: border-color 0.3s;" onmouseover="this.style.borderColor='#38bdf8'" onmouseout="this.style.borderColor='#334155'">
+        Click para seleccionar archivo
+    </label>
+    <button id="uploadBtn" style="width: 100%; padding: 12px; background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">
+        Subir a la Nube
+    </button>
+    <div id="status" style="margin-top: 25px; min-height: 40px;"></div>
+`;
 
-const input = document.createElement('input');
-input.type = 'file';
-input.style.cssText = 'margin: 20px 0; width: 100%; color: #bb86fc;';
-
-const btn = document.createElement('button');
-btn.innerText = 'Subir Ahora';
-btn.style.cssText = 'background: #bb86fc; color: #000; font-weight: bold; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; width: 100%; transition: opacity 0.3s;';
-
-const status = document.createElement('div');
-status.style.marginTop = '20px';
-status.style.fontSize = '14px';
-status.style.wordBreak = 'break-all';
-
-card.appendChild(title);
-card.appendChild(input);
-card.appendChild(btn);
-card.appendChild(status);
 document.body.appendChild(card);
 
-// 2. Lógica de Gofile (Paso 1: Buscar Servidor -> Paso 2: Subir)
-btn.addEventListener('click', async () => {
-    const file = input.files[0];
-    if (!file) return alert('Selecciona un archivo');
+const fileInput = document.getElementById('fileInput');
+const btn = document.getElementById('uploadBtn');
+const status = document.getElementById('status');
+
+// 2. Lógica de subida a Catbox
+btn.onclick = async () => {
+    const file = fileInput.files[0];
+    if (!file) return alert("Selecciona un archivo primero");
 
     btn.disabled = true;
     btn.style.opacity = '0.5';
-    btn.innerText = 'Conectando con servidor...';
-    status.innerHTML = '<span style="color: yellow;">🔄 Obteniendo servidor disponible...</span>';
+    btn.innerText = 'Subiendo...';
+    status.innerHTML = '<span style="color: #38bdf8;">⏳ Procesando...</span>';
+
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', file);
 
     try {
-        // PASO 1: Pedir a Gofile qué servidor usar (evita CORS y 401)
-        const serverReq = await fetch('https://api.gofile.io/getServer');
-        const serverData = await serverReq.json();
-
-        if (serverData.status !== 'ok') throw new Error('No hay servidores disponibles');
-        
-        const serverToUse = serverData.data.server;
-        console.log(`Usando servidor: ${serverToUse}`);
-
-        // PASO 2: Subir el archivo a ese servidor específico
-        btn.innerText = 'Subiendo archivo...';
-        status.innerHTML = `<span style="color: cyan;">⬆️ Subiendo a ${serverToUse}...</span>`;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const uploadUrl = `https://${serverToUse}.gofile.io/uploadFile`;
-        
-        const response = await fetch(uploadUrl, {
+        // Usamos un proxy de CORS si es necesario, pero Catbox suele aceptar bien peticiones directas
+        const response = await fetch('https://corsproxy.io/?https://catbox.moe/user/api.php', {
             method: 'POST',
             body: formData
         });
 
-        const result = await response.json();
+        if (!response.ok) throw new Error('Error en la conexión con el servidor');
 
-        if (result.status === 'ok') {
-            const downloadLink = result.data.downloadPage;
+        // Catbox devuelve directamente el link como TEXTO, no como JSON
+        const link = await response.text();
+
+        if (link.startsWith('http')) {
             status.innerHTML = `
-                <div style="background: #2e7d32; color: white; padding: 10px; border-radius: 5px; margin-top: 10px;">
-                    <strong>✅ ¡ÉXITO!</strong><br><br>
-                    <a href="${downloadLink}" target="_blank" style="color: #fff; font-weight: bold; text-decoration: underline;">${downloadLink}</a>
+                <div style="background: rgba(56, 189, 248, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #38bdf8;">
+                    <p style="color: #38bdf8; margin: 0 0 10px; font-size: 14px;">✅ Archivo disponible en:</p>
+                    <a href="${link}" target="_blank" style="color: white; font-size: 13px; word-break: break-all;">${link}</a>
                 </div>
             `;
         } else {
-            throw new Error('Falló la subida final.');
+            throw new Error(link || 'Respuesta inesperada del servidor');
         }
 
-    } catch (error) {
-        console.error(error);
-        status.innerHTML = `<p style="color: #cf6679;">❌ Error: ${error.message}</p>`;
+    } catch (err) {
+        console.error(err);
+        status.innerHTML = `<p style="color: #f87171; font-size: 13px;">❌ Error: ${err.message}.<br>Prueba desactivando tu AdBlock.</p>`;
     } finally {
         btn.disabled = false;
         btn.style.opacity = '1';
-        btn.innerText = 'Subir Ahora';
+        btn.innerText = 'Subir a la Nube';
     }
-});
+};

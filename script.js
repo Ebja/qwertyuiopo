@@ -1,119 +1,106 @@
-// 1. Limpiamos cualquier cosa previa
+// 1. Limpieza inicial
 document.body.innerHTML = '';
-document.body.style.cssText = 'margin: 0; padding: 0; background-color: #f0f2f5; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;';
+document.body.style.cssText = 'margin: 0; background-color: #2d3436; font-family: "Courier New", monospace; display: flex; justify-content: center; align-items: center; height: 100vh; color: white;';
 
-// 2. Creamos la tarjeta central
+// 2. Crear la tarjeta (Estilo Terminal/Hacker)
 const card = document.createElement('div');
 card.style.cssText = `
-    background: white;
+    background: #000;
     padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border: 1px solid #00b894;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 184, 148, 0.4);
     width: 90%;
-    max-width: 400px;
+    max-width: 450px;
     text-align: center;
 `;
 
-// 3. Título e instrucciones
+// 3. Elementos
 const title = document.createElement('h2');
-title.innerText = 'Subida de Archivos';
-title.style.color = '#333';
+title.innerText = '> UPLOAD_SYSTEM';
+title.style.color = '#00b894';
+title.style.marginTop = '0';
 
-const subtitle = document.createElement('p');
-subtitle.innerText = 'Servidor: Pixeldrain (Compatible con GitHub Pages)';
-subtitle.style.fontSize = '12px';
-subtitle.style.color = '#777';
-subtitle.style.marginBottom = '20px';
+const instructions = document.createElement('p');
+instructions.innerText = 'Servidor: transfer.sh (Método PUT)';
+instructions.style.fontSize = '12px';
+instructions.style.color = '#b2bec3';
 
-// 4. Input y Botón
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
-fileInput.style.marginBottom = '15px';
-fileInput.style.width = '100%';
+fileInput.style.cssText = 'margin: 20px 0; color: white; width: 100%;';
 
-const uploadBtn = document.createElement('button');
-uploadBtn.innerText = 'Subir Archivo';
-uploadBtn.style.cssText = `
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 6px;
+const btn = document.createElement('button');
+btn.innerText = '[ EJECUTAR SUBIDA ]';
+btn.style.cssText = `
+    background: transparent;
+    color: #00b894;
+    border: 1px solid #00b894;
+    padding: 10px 20px;
     cursor: pointer;
-    font-size: 16px;
+    font-family: inherit;
+    font-weight: bold;
     width: 100%;
-    transition: background 0.3s;
+    transition: all 0.3s;
 `;
 
-// 5. Contenedor de resultados
-const statusDiv = document.createElement('div');
-statusDiv.style.marginTop = '20px';
-statusDiv.style.wordBreak = 'break-all'; // Para que el link no rompa el diseño
+// Efecto hover simple en JS
+btn.onmouseover = () => { btn.style.background = '#00b894'; btn.style.color = 'black'; };
+btn.onmouseout = () => { btn.style.background = 'transparent'; btn.style.color = '#00b894'; };
 
-// Ensamblar
+const log = document.createElement('div');
+log.style.cssText = 'margin-top: 20px; text-align: left; font-size: 12px; min-height: 50px; word-break: break-all;';
+log.innerText = '> Esperando archivo...';
+
 card.appendChild(title);
+card.appendChild(instructions);
 card.appendChild(fileInput);
-card.appendChild(uploadBtn);
-card.appendChild(statusDiv);
+card.appendChild(btn);
+card.appendChild(log);
 document.body.appendChild(card);
 
-// 6. Lógica "Arreglada" usando Pixeldrain
-uploadBtn.addEventListener('click', async () => {
+// 4. Lógica de subida usando PUT (Más robusto contra CORS)
+btn.onclick = async () => {
     const file = fileInput.files[0];
-    
     if (!file) {
-        alert("¡Selecciona un archivo primero!");
+        log.innerText = '> ERROR: Input vacío.';
+        log.style.color = '#ff7675';
         return;
     }
 
-    // Estado de carga
-    uploadBtn.disabled = true;
-    uploadBtn.innerText = 'Subiendo... espere';
-    uploadBtn.style.backgroundColor = '#6c757d';
-    statusDiv.innerHTML = '<p style="color: blue;">⏳ Enviando datos a la nube...</p>';
-
-    const formData = new FormData();
-    formData.append('file', file); // Pixeldrain también usa el campo 'file'
+    btn.disabled = true;
+    btn.innerText = '[ PROCESANDO... ]';
+    log.innerText = '> Iniciando conexión con transfer.sh...';
+    log.style.color = '#dfe6e9';
 
     try {
-        // CAMBIO CLAVE: Usamos la API de Pixeldrain
-        const response = await fetch('https://pixeldrain.com/api/file', {
-            method: 'POST',
-            body: formData
-            // Pixeldrain tiene cabeceras CORS muy permisivas, ideal para JS puro
+        // Usamos el nombre del archivo en la URL y el método PUT
+        // Esto suele saltarse muchas restricciones que tienen los POST
+        const response = await fetch(`https://transfer.sh/${file.name}`, {
+            method: 'PUT',
+            body: file
         });
 
         if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
+            throw new Error(`Server status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const downloadLink = await response.text(); // transfer.sh devuelve el link como texto plano
 
-        if (data.success) {
-            const link = `https://pixeldrain.com/u/${data.id}`;
-            
-            statusDiv.innerHTML = `
-                <div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; border: 1px solid #c3e6cb;">
-                    <strong>¡Subido con éxito!</strong><br><br>
-                    <a href="${link}" target="_blank" style="color: #007bff; font-weight: bold;">${link}</a>
-                </div>
-            `;
-        } else {
-            throw new Error('La API no devolvió éxito.');
-        }
+        log.innerHTML = `
+            <span style="color: #00b894;">> ÉXITO. Archivo transferido.</span><br><br>
+            Link de descarga:<br>
+            <a href="${downloadLink}" target="_blank" style="color: #74b9ff; text-decoration: none; font-size: 14px;">${downloadLink}</a>
+        `;
 
     } catch (error) {
         console.error(error);
-        statusDiv.innerHTML = `
-            <div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; border: 1px solid #f5c6cb;">
-                <strong>Error:</strong> No se pudo subir.<br>
-                <small>${error.message}</small>
-            </div>
+        log.innerHTML = `
+            <span style="color: #ff7675;">> FATAL ERROR:</span> ${error.message}<br>
+            <span style="color: #fab1a0;">> Posible causa: AdBlocker activo o red restringida.</span>
         `;
     } finally {
-        // Restaurar botón
-        uploadBtn.disabled = false;
-        uploadBtn.innerText = 'Subir Archivo';
-        uploadBtn.style.backgroundColor = '#007bff';
+        btn.disabled = false;
+        btn.innerText = '[ EJECUTAR SUBIDA ]';
     }
-});
+};
